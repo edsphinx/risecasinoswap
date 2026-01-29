@@ -1,7 +1,8 @@
 /**
  * @title Deploy Uniswap V2 Factory
- * @notice Deploys UniswapV2Factory to Rise Testnet
+ * @notice Deploys UniswapV2Factory to Rise Testnet or Monad Testnet
  * @dev Run: npx hardhat run scripts/deploy.js --network rise_testnet
+ *      Or:  npx hardhat run scripts/deploy.js --network monad_testnet
  */
 
 const hre = require("hardhat");
@@ -50,6 +51,29 @@ async function main() {
         JSON.stringify(deploymentInfo, null, 2)
     );
     console.log(`\nDeployment info saved to deployment-${hre.network.name}.json`);
+
+    // Verify contract on block explorer
+    if (hre.network.name === "monad_testnet" || hre.network.name === "rise_testnet") {
+        console.log("\n--- Verifying Contract ---");
+        console.log("Waiting 30 seconds for block explorer to index...");
+        await new Promise(resolve => setTimeout(resolve, 30000));
+
+        try {
+            await hre.run("verify:verify", {
+                address: factory.address,
+                constructorArguments: [feeToSetter],
+            });
+            console.log("Contract verified successfully!");
+        } catch (error) {
+            if (error.message.includes("Already Verified")) {
+                console.log("Contract is already verified!");
+            } else {
+                console.log("Verification failed:", error.message);
+                console.log("You can verify manually later with:");
+                console.log(`npx hardhat verify --network ${hre.network.name} ${factory.address} "${feeToSetter}"`);
+            }
+        }
+    }
 }
 
 main()
